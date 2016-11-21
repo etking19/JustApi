@@ -95,227 +95,268 @@ namespace JustApi.Controllers
             return response;
         }
 
-        public Response Post([FromBody]Model.JobDetails jobDetails)
+        public Response Post([FromBody]Model.JobDetails jobDetails, string promoCode = null)
         {
-            // first add the user if not existed
-            var userId = jobDetails.ownerUserId;
-            var userObj = userDao.GetUserById(userId);
-            if (userObj == null)
+            try
             {
-                response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EParameterError);
-                return response;
-            }
-
-            // set the correct lorry type
-            switch (int.Parse(jobDetails.fleetTypeId))
-            {
-                case (int)Constants.Configuration.LorryType.Lorry_1tonne:
-                    jobDetails.fleetTypeId = "1";
-                    break;
-                case (int)Constants.Configuration.LorryType.Lorry_3tonne:
-                    jobDetails.fleetTypeId = "2";
-                    break;
-                case (int)Constants.Configuration.LorryType.Lorry_5tonne:
-                    jobDetails.fleetTypeId = "3";
-                    break;
-                default:
+                // first add the user if not existed
+                var userId = jobDetails.ownerUserId;
+                var userObj = userDao.GetUserById(userId);
+                if (userObj == null)
+                {
                     response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EParameterError);
                     return response;
-            }
+                }
 
-            // get the gps coordinate if not passed in
-            // get the state id and country id if not passed in
-            foreach (Model.Address address in jobDetails.addressFrom)
-            {
-                if (address.gpsLongitude == 0 ||
-                    address.gpsLatitude == 0 ||
-                    address.stateId == null ||
-                    address.countryId == null)
+                // validate the voucher
+                if (promoCode != null)
                 {
-                    // request gps cordinate
-                    AddressComponents mapsObj = Utils.GetGpsCoordinate(address.address1, address.address2, address.address3, address.postcode);
-                    if (mapsObj == null)
+                    var voucherResult = new Vouchers();
+
+                    // TODO: bug here: as the amount pass in was discounted amount, so it might below the expected use amount
+                    // best way is not taking the amount required, and recalculate here to avoid injection attack
+                    var responseCode = validateVoucher(promoCode, jobDetails.amount, out voucherResult);
+                    if (responseCode != Constant.ErrorCode.ESuccess)
                     {
-                        // find from local database
-                        Postcode postcodeClass = new Postcode();
-                        string nameLocal;
-                        var result = postcodeClass.PostcodeNameList.TryGetValue(address.postcode, out nameLocal);
-                        if (result == false)
+                        response = Utility.Utils.SetResponse(response, false, responseCode);
+                        return response;
+                    }
+
+                    if (voucherDao.IncreaseUsedCount(promoCode) == false)
+                    {
+                        DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, "voucherDao.IncreaseUsedCount(promoCode) in Common controller: " + promoCode);
+                        response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EVoucherNotValid);
+                        return response;
+                    }
+                }
+
+                // get the gps coordinate if not passed in
+                // get the state id and country id if not passed in
+                foreach (Model.Address address in jobDetails.addressFrom)
+                {
+                    if (address.gpsLongitude == 0 ||
+                        address.gpsLatitude == 0 ||
+                        address.stateId == null ||
+                        address.countryId == null)
+                    {
+                        // request gps cordinate
+                        AddressComponents mapsObj = Utils.GetGpsCoordinate(address.address1, address.address2, address.address3, address.postcode);
+                        if (mapsObj == null)
                         {
-                            response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
-                            return response;
-                        }
-                        mapsObj = Utils.GetGpsCoordinate(nameLocal);
-                    }
-
-                    if (address.gpsLongitude == 0)
-                    {
-                        address.gpsLongitude = mapsObj.geometry.location.lng;
-                    }
-
-                    if (address.gpsLatitude == 0)
-                    {
-                        address.gpsLatitude = mapsObj.geometry.location.lat;
-                    }
-
-                    if (address.countryId == null)
-                    {
-                        var countryObj = countryDao.GetCountries().Find(t => t.name.Contains(mapsObj.address_components.Find(c => c.types.Contains("country")).long_name));
-                        address.countryId = countryObj.countryId;
-                    }
-
-                    if (address.stateId == null)
-                    {
-                        var stateList = stateDao.GetByCountryId(address.countryId);
-                        var stateObj = stateList.Find(t => t.name.Contains(mapsObj.address_components.Find(a => a.types.Contains("administrative_area_level_1")).long_name));
-                        if (stateObj == null)
-                        {
-                            // cannot find from google api, use local database
+                            // find from local database
                             Postcode postcodeClass = new Postcode();
-                            string stateLocal;
-                            var localDic = postcodeClass.PostcodeList.TryGetValue(address.postcode, out stateLocal);
-                            address.stateId = stateList.Find(t => t.name.Contains(stateLocal)).stateId;
+                            string nameLocal;
+                            var result = postcodeClass.PostcodeNameList.TryGetValue(address.postcode, out nameLocal);
+                            if (result == false)
+                            {
+                                response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
+                                return response;
+                            }
+                            mapsObj = Utils.GetGpsCoordinate(nameLocal);
                         }
-                        else
+
+                        if (address.gpsLongitude == 0)
                         {
-                            address.stateId = stateObj.stateId;
+                            address.gpsLongitude = mapsObj.geometry.location.lng;
+                        }
+
+                        if (address.gpsLatitude == 0)
+                        {
+                            address.gpsLatitude = mapsObj.geometry.location.lat;
+                        }
+
+                        if (address.countryId == null)
+                        {
+                            var countryObj = countryDao.GetCountries().Find(t => t.name.Contains(mapsObj.address_components.Find(c => c.types.Contains("country")).long_name));
+                            address.countryId = countryObj.countryId;
+                        }
+
+                        if (address.stateId == null)
+                        {
+                            var stateList = stateDao.GetByCountryId(address.countryId);
+                            try
+                            {
+                                var stateObj = stateList.Find(t => t.name.Contains(mapsObj.address_components.Find(a => a.types.Contains("administrative_area_level_1")).long_name));
+                                if (stateObj == null)
+                                {
+                                    // cannot find from google api, use local database
+                                    Postcode postcodeClass = new Postcode();
+                                    string stateLocal;
+                                    var localDic = postcodeClass.PostcodeList.TryGetValue(address.postcode, out stateLocal);
+                                    address.stateId = stateList.Find(t => t.name.Contains(stateLocal)).stateId;
+                                }
+                                else
+                                {
+                                    address.stateId = stateObj.stateId;
+                                }
+                            }
+                            catch (Exception)
+                            {
+                                // cannot find from google api, use local database
+                                Postcode postcodeClass = new Postcode();
+                                string stateLocal;
+                                var localDic = postcodeClass.PostcodeList.TryGetValue(address.postcode, out stateLocal);
+                                address.stateId = stateList.Find(t => t.name.Contains(stateLocal)).stateId;
+                            }
+
                         }
                     }
                 }
-            }
 
-            foreach (Model.Address address in jobDetails.addressTo)
-            {
-                if (address.gpsLongitude == 0 ||
-                    address.gpsLatitude == 0 ||
-                    address.stateId == null ||
-                    address.countryId == null)
+                foreach (Model.Address address in jobDetails.addressTo)
                 {
-                    // request gps cordinate
-                    AddressComponents mapsObj = Utils.GetGpsCoordinate(address.address1, address.address2, address.address3, address.postcode);
-                    if (mapsObj == null)
+                    if (address.gpsLongitude == 0 ||
+                        address.gpsLatitude == 0 ||
+                        address.stateId == null ||
+                        address.countryId == null)
                     {
-                        // find from local database
-                        Postcode postcodeClass = new Postcode();
-                        string nameLocal;
-                        var result = postcodeClass.PostcodeNameList.TryGetValue(address.postcode, out nameLocal);
-                        if (result == false)
+                        // request gps cordinate
+                        AddressComponents mapsObj = Utils.GetGpsCoordinate(address.address1, address.address2, address.address3, address.postcode);
+                        if (mapsObj == null)
                         {
-                            response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
-                            return response;
-                        }
-                        mapsObj = Utils.GetGpsCoordinate(nameLocal);
-                    }
-
-                    if (address.gpsLongitude == 0)
-                    {
-                        address.gpsLongitude = mapsObj.geometry.location.lng;
-                    }
-
-                    if (address.gpsLatitude == 0)
-                    {
-                        address.gpsLatitude = mapsObj.geometry.location.lat;
-                    }
-
-                    if (address.countryId == null)
-                    {
-                        var countryObj = countryDao.GetCountries().Find(t => t.name.Contains(mapsObj.address_components.Find(c => c.types.Contains("country")).long_name));
-                        address.countryId = countryObj.countryId;
-                    }
-
-                    if (address.stateId == null)
-                    {
-                        var stateList = stateDao.GetByCountryId(address.countryId);
-                        var stateObj = stateList.Find(t => t.name.Contains(mapsObj.address_components.Find(a => a.types.Contains("administrative_area_level_1")).long_name));
-                        if (stateObj == null)
-                        {
-                            // cannot find from google api, use local database
+                            // find from local database
                             Postcode postcodeClass = new Postcode();
-                            string stateLocal;
-                            postcodeClass.PostcodeList.TryGetValue(address.postcode, out stateLocal);
-                            address.stateId = stateList.Find(t => t.name.Contains(stateLocal)).stateId;
+                            string nameLocal;
+                            var result = postcodeClass.PostcodeNameList.TryGetValue(address.postcode, out nameLocal);
+                            if (result == false)
+                            {
+                                response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
+                                return response;
+                            }
+                            mapsObj = Utils.GetGpsCoordinate(nameLocal);
                         }
-                        else
+
+                        if (address.gpsLongitude == 0)
                         {
-                            address.stateId = stateObj.stateId;
+                            address.gpsLongitude = mapsObj.geometry.location.lng;
+                        }
+
+                        if (address.gpsLatitude == 0)
+                        {
+                            address.gpsLatitude = mapsObj.geometry.location.lat;
+                        }
+
+                        if (address.countryId == null)
+                        {
+                            var countryObj = countryDao.GetCountries().Find(t => t.name.Contains(mapsObj.address_components.Find(c => c.types.Contains("country")).long_name));
+                            address.countryId = countryObj.countryId;
+                        }
+
+                        if (address.stateId == null)
+                        {
+                            var stateList = stateDao.GetByCountryId(address.countryId);
+
+                            try
+                            {
+                                var stateObj = stateList.Find(t => t.name.Contains(mapsObj.address_components.Find(a => a.types.Contains("administrative_area_level_1")).long_name));
+                                if (stateObj == null)
+                                {
+                                    // cannot find from google api, use local database
+                                    Postcode postcodeClass = new Postcode();
+                                    string stateLocal;
+                                    postcodeClass.PostcodeList.TryGetValue(address.postcode, out stateLocal);
+                                    address.stateId = stateList.Find(t => t.name.Contains(stateLocal)).stateId;
+                                }
+                                else
+                                {
+                                    address.stateId = stateObj.stateId;
+                                }
+                            }
+                            catch (Exception)
+                            {
+                                // cannot find from google api, use local database
+                                Postcode postcodeClass = new Postcode();
+                                string stateLocal;
+                                postcodeClass.PostcodeList.TryGetValue(address.postcode, out stateLocal);
+                                address.stateId = stateList.Find(t => t.name.Contains(stateLocal)).stateId;
+                            }
                         }
                     }
                 }
-            }
 
 
-            // add the job details
-            jobDetails.createdBy = userId;
-            jobDetails.modifiedBy = userId;
-            var jobId = jobDetailsDao.Add(jobDetails);
-            if (jobId == null)
-            {
-                response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
-                return response;
-            }
-
-            // add the job status
-            if (null == jobDetailsDao.AddOrder(jobId, userId))
-            {
-                response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
-                return response;
-            }
-
-            // add the address from, to
-            foreach (Model.Address add in jobDetails.addressFrom)
-            {
-                add.createdBy = userId;
-                var result = addressDao.Add(add, jobId, userObj.displayName, userObj.contactNumber, Dao.AddressDao.EType.From);
-                if (result == null)
+                // add the job details
+                jobDetails.createdBy = userId;
+                jobDetails.modifiedBy = userId;
+                var jobId = jobDetailsDao.Add(jobDetails);
+                if (jobId == null)
                 {
                     response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
                     return response;
                 }
-            }
 
-            foreach (Model.Address add in jobDetails.addressTo)
-            {
-                add.createdBy = userId;
-                var result = addressDao.Add(add, jobId, userObj.displayName, userObj.contactNumber, Dao.AddressDao.EType.To);
-                if (result == null)
+                // add the job status
+                if (null == jobDetailsDao.AddOrder(jobId, userId))
                 {
                     response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
                     return response;
                 }
+
+                // add the address from, to
+                foreach (Model.Address add in jobDetails.addressFrom)
+                {
+                    add.createdBy = userId;
+                    var result = addressDao.Add(add, jobId, userObj.displayName, userObj.contactNumber, Dao.AddressDao.EType.From);
+                    if (result == null)
+                    {
+                        response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
+                        return response;
+                    }
+                }
+
+                foreach (Model.Address add in jobDetails.addressTo)
+                {
+                    add.createdBy = userId;
+                    var result = addressDao.Add(add, jobId, userObj.displayName, userObj.contactNumber, Dao.AddressDao.EType.To);
+                    if (result == null)
+                    {
+                        response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
+                        return response;
+                    }
+                }
+
+                // generate the unique job id
+                var uniqueId = Utils.EncodeUniqueId(jobId);
+
+                // request the job payment
+                PaymentController controller = new PaymentController();
+                var paymentReq = controller.Post(uniqueId);
+
+                // send notification to creator
+                var clientIdentifiers = userDao.GetDeviceIdentifier(userId);
+                var msg = NotificationMsg.NewJob_Desc + uniqueId;
+                if (clientIdentifiers != null)
+                {
+                    // user have app installed and identifier found, send push notification
+                    var extraData = Helper.PushNotification.ConstructExtraData(Helper.PushNotification.ECategories.OrderCreated, uniqueId);
+                    Utility.UtilNotification.BroadCastMessage(clientIdentifiers.ToArray(), extraData, NotificationMsg.NewJob_Title, msg);
+                }
+
+                if (ConfigurationManager.AppSettings.Get("Debug") != "1")
+                {
+                    // send sms together because no history of push notification
+                    UtilSms.SendSms(userObj.contactNumber, msg);
+                }
+
+                // send email to user
+                var fleetType = fleetTypeDao.Get(jobDetails.fleetTypeId);
+                var jobType = jobTypeDao.Get().Find(t => t.jobTypeId == jobDetails.jobTypeId);
+                UtilEmail.SendInvoice(uniqueId, (string)paymentReq.payload, userObj, jobDetails, fleetType.name, jobType.name);
+
+                response.payload = uniqueId;
+                response = Utility.Utils.SetResponse(response, true, Constant.ErrorCode.ESuccess);
+
+                return response;
             }
-
-            // generate the unique job id
-            var uniqueId = Utils.EncodeUniqueId(jobId);
-
-            // request the job payment
-            PaymentController controller = new PaymentController();
-            var paymentReq = controller.Post(uniqueId);
-
-            // send notification to creator
-            var clientIdentifiers = userDao.GetDeviceIdentifier(userId);
-            var msg = NotificationMsg.NewJob_Desc + uniqueId;
-            if (clientIdentifiers != null)
+            catch (Exception e)
             {
-                // user have app installed and identifier found, send push notification
-                var extraData = Helper.PushNotification.ConstructExtraData(Helper.PushNotification.ECategories.OrderCreated, uniqueId);
-                Utility.UtilNotification.BroadCastMessage(clientIdentifiers.ToArray(), extraData, NotificationMsg.NewJob_Title, msg);
+                DBLogger.GetInstance().Log(DBLogger.ESeverity.Error, e.Message);
+                DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, e.StackTrace);
+
+                response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EUnknownError);
+                return response;
             }
-
-            if (ConfigurationManager.AppSettings.Get("Debug") != "1")
-            {
-                // send sms together because no history of push notification
-                UtilSms.SendSms(userObj.contactNumber, msg);
-            }
-
-            // send email to user
-            var fleetType = fleetTypeDao.Get(jobDetails.fleetTypeId);
-            var jobType = jobTypeDao.Get().Find(t => t.jobTypeId == jobDetails.jobTypeId);
-            UtilEmail.SendInvoice(uniqueId, (string)paymentReq.payload, userObj, jobDetails, fleetType.name, jobType.name);
-
-            response.payload = uniqueId;
-            response = Utility.Utils.SetResponse(response, true, Constant.ErrorCode.ESuccess);
-
-            return response;
+            
         }
 
         public Response Delete(string jobId)

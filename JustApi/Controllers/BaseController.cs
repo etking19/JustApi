@@ -47,6 +47,8 @@ namespace JustApi.Controllers
 
         protected static PaymentsDao paymentsDao = new PaymentsDao();
         protected static StatisticDao statisticDao = new StatisticDao();
+        protected static IkeaDao ikeaDao = new IkeaDao();
+        protected static IkeaProjectDao ikeaProjectDao = new IkeaProjectDao();
 
         protected int validateVoucher(string promoCode, float totalSpending, out Vouchers result)
         {

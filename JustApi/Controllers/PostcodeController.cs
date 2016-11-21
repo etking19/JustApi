@@ -48,6 +48,7 @@ namespace JustApi.Controllers
                 }
 
                 string fromFormattedAdd = null;
+                Model.Google.Bounds fromBound = null; 
                 do
                 {
                     MapsGeocode jsonObj = JsonConvert.DeserializeObject<MapsGeocode>(result);
@@ -62,6 +63,7 @@ namespace JustApi.Controllers
                     }
 
                     fromFormattedAdd = representAddFrom.formatted_address;
+                    fromBound = representAddFrom.geometry.bounds;
                     break;
 
                 } while (true);
@@ -78,6 +80,9 @@ namespace JustApi.Controllers
                     return response;
                 }
 
+                /*
+                 * Temporary removed the checking
+                 *
                 // validate the available postcode
                 string[] supportedFrom = supportedAreaDao.GetFrom();
                 if (Utils.ContainsAny(fromFormattedAdd, supportedFrom) == false)
@@ -86,8 +91,10 @@ namespace JustApi.Controllers
                     response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EPostcodeFromNotSupport);
                     return response;
                 }
+                */
 
                 string toFormattedAdd = null;
+                Model.Google.Bounds toBound = null;
                 if (deliverTo != null)
                 {
                     url = string.Format("https://maps.googleapis.com/maps/api/geocode/json?region=my&address={0}", deliverTo);
@@ -120,6 +127,7 @@ namespace JustApi.Controllers
                         }
 
                         toFormattedAdd = representAddTo.formatted_address;
+                        toBound = representAddTo.geometry.bounds;
                         break;
 
                     } while (true);
@@ -137,6 +145,9 @@ namespace JustApi.Controllers
                         return response;
                     }
 
+                    /*
+                     * Temporary remove the checking 
+                     * 
                     // validate the available postcode
                     string[] supportedTo = supportedAreaDao.GetTo();
                     if (Utils.ContainsAny(toFormattedAdd, supportedTo) == false)
@@ -145,6 +156,7 @@ namespace JustApi.Controllers
                         response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EPostcodeToNotSupport);
                         return response;
                     }
+                    */
                 }
 
                 DBLogger.GetInstance().Log(DBLogger.ESeverity.Analytic, string.Format("From Interested: {0}", fromFormattedAdd));
@@ -184,6 +196,8 @@ namespace JustApi.Controllers
                         response.payload = javaScriptSerializer.Serialize(directionObj.status);
                     }
 
+                    postCodeList.fromBound = fromBound;
+                    postCodeList.toBound = toBound;
                     postCodeList.distance = directionObj.routes[0].legs[0].distance.value;
                     postCodeList.duration = directionObj.routes[0].legs[0].duration.value;
                 }

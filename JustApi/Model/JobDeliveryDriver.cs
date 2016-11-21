@@ -13,5 +13,8 @@ namespace JustApi.Model
 
         public User driver { get; set; }
         public Company company { get; set; }
+
+        public float gpsLongitude { get; set; }
+        public float gpsLatitude { get; set; }
     }
 }

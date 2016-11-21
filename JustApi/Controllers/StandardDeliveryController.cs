@@ -144,10 +144,11 @@ namespace JustApi.Controllers
                 if (responseCode == Constant.ErrorCode.ESuccess)
                 {
                     // first set the used voucher count
-                    if (voucherDao.IncreaseUsedCount(promoCode) == false)
-                    {
-                        DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, "voucherDao.IncreaseUsedCount(promoCode) in Common controller: " + promoCode);
-                    }
+                    // 20161118 - increase count during confirm (add job) instead
+                    //if (voucherDao.IncreaseUsedCount(promoCode) == false)
+                    //{
+                    //    DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, "voucherDao.IncreaseUsedCount(promoCode) in Common controller: " + promoCode);
+                    //}
 
                     if (int.Parse(voucherResult.voucherType.id) == (int)Constants.Configuration.VoucherType.Percentage)
                     {

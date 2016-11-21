@@ -168,6 +168,35 @@ namespace JustApi.Utility
             });
         }
 
+        public static void SendIkeaOrderReceived(Model.User user, string unitNumber, Model.IkeaProject project, string fileUrl, string orderId)
+        {
+            Task.Run(async () =>
+            {
+                // send email
+                String apiKey = ConfigurationManager.AppSettings.Get("SendGridApiKey");
+                dynamic sg = new SendGrid.SendGridAPIClient(apiKey, "https://api.sendgrid.com", "v3");
 
+                Email from = new Email("care@justlorry.com", "JustLorry");
+                String subject = ConfigurationManager.AppSettings.Get("OrderReceivedSubject") + string.Format("(IKEA ORDER: {0})", project.name);
+                Email to = new Email("denell@justlorry.com", "JustLorry");
+                Content content = new Content("text/html", subject);
+                Mail mail = new Mail(from, subject, to, content);
+
+                mail.TemplateId = ConfigurationManager.AppSettings.Get("OrderReceivedTemplateId");
+                mail.Personalization[0].AddSubstitution("{{orderId}}", orderId);
+                mail.Personalization[0].AddSubstitution("{{name}}", user.displayName);
+                mail.Personalization[0].AddSubstitution("{{contact}}", user.contactNumber);
+                mail.Personalization[0].AddSubstitution("{{email}}", user.email);
+                mail.Personalization[0].AddSubstitution("{{jobType}}", "IKEA PURCHASE & DELIVERY");
+                mail.Personalization[0].AddSubstitution("{{downloadLink}}", fileUrl);
+
+                string toAdd = string.Format("{0}, {1}, {2}, {3} {4}, {5}", unitNumber, project.address2, project.address3, 
+                    project.postcode, project.state.name, project.country.name);
+                mail.Personalization[0].AddSubstitution("{{to}}", toAdd);
+
+                dynamic response = await sg.client.mail.send.post(requestBody: mail.Get());
+
+            });
+        }
     }
 }

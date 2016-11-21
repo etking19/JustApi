@@ -10,9 +10,9 @@ namespace JustApi.Controllers
 {
     public class DeviceController : BaseController
     {
-        public Response Put(string userId, string identifier)
+        public Response Put(string userId, string newIdentifier)
         {
-            if (false == userDao.InsertOrUpdateDevice(userId, identifier))
+            if (false == userDao.InsertOrUpdateDevice(userId, newIdentifier))
             {
                 response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
                 return response;
@@ -23,3 +23,4 @@ namespace JustApi.Controllers
         }
     }
 }
+ 

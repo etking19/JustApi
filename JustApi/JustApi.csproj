@@ -133,7 +133,9 @@
     <Content Include="Global.asax" />
     <Content Include="scripts\ai.0.22.19-build00125.js" />
     <Content Include="scripts\ai.0.22.19-build00125.min.js" />
-    <Content Include="Web.config" />
+    <Content Include="Web.config">
+      <SubType>Designer</SubType>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="App_Start\WebApiConfig.cs" />
@@ -151,6 +153,7 @@
     <Compile Include="Controllers\DisposalDeliveryController.cs" />
     <Compile Include="Controllers\FleetController.cs" />
     <Compile Include="Controllers\FleetTypeController.cs" />
+    <Compile Include="Controllers\IkeaDeliveryController.cs" />
     <Compile Include="Controllers\JobController.cs" />
     <Compile Include="Controllers\JobDeliveryController.cs" />
     <Compile Include="Controllers\JobDeliveryDeclineController.cs" />
@@ -187,6 +190,8 @@
     <Compile Include="Dao\DeliveryPriceDao.cs" />
     <Compile Include="Dao\FleetDao.cs" />
     <Compile Include="Dao\FleetTypeDao.cs" />
+    <Compile Include="Dao\IkeaDao.cs" />
+    <Compile Include="Dao\IkeaProjectDao.cs" />
     <Compile Include="Dao\JobDeliveryDao.cs" />
     <Compile Include="Dao\JobDeliveryDeclinedDao.cs" />
     <Compile Include="Dao\JobDetailsDao.cs" />
@@ -221,6 +226,7 @@
     <Compile Include="Model\FleetType.cs" />
     <Compile Include="Model\Google\Direction.cs" />
     <Compile Include="Model\Google\MapsGeocode.cs" />
+    <Compile Include="Model\Ikea.cs" />
     <Compile Include="Model\JobDelivery.cs" />
     <Compile Include="Model\JobDeliveryDriver.cs" />
     <Compile Include="Model\JobDetails.cs" />

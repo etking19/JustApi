@@ -15,6 +15,7 @@ namespace JustApi.Dao
         private readonly string TABLE_DRIVER = "users";
         private readonly string TABLE_COMPANY = "companies";
         private readonly string TABLE_USER_COMPANY = "user_company";
+        private readonly string TABLE_USER_TRACKING = "user_tracking";
 
         public string Add(string jobId, string companyId, string driverId, string fleetId)
         {
@@ -76,11 +77,12 @@ namespace JustApi.Dao
             MySqlDataReader reader = null;
             try
             {
-                string query = string.Format("SELECT {0}.*, {1}.*, {2}.* FROM {0} " +
+                string query = string.Format("SELECT {0}.*, {1}.*, {2}.*,  tracking.* FROM {0} " +
                     "INNER JOIN {1} ON {1}.id={0}.driver_user_id " +
                     "INNER JOIN {2} ON {2}.id={0}.company_id " +
+                    "LEFT JOIN (select max(creation_date) creation_date, user_id, longitude, latitude from {3} group by user_id desc) tracking ON tracking.user_id={0}.driver_user_id " +
                     "WHERE {0}.job_id=@job_id;", 
-                    TABLE_NAME, TABLE_DRIVER, TABLE_COMPANY);
+                    TABLE_NAME, TABLE_DRIVER, TABLE_COMPANY, TABLE_USER_TRACKING);
 
                 mySqlCmd = new MySqlCommand(query);
                 mySqlCmd.Parameters.AddWithValue("@job_id", jobId);
@@ -94,6 +96,8 @@ namespace JustApi.Dao
                         id = reader["id"].ToString(),
                         jobId = reader["job_id"].ToString(),
                         rating = reader.GetFloat("rating"),
+                        gpsLatitude = reader.GetFloat("latitude"),
+                        gpsLongitude = reader.GetFloat("longitude"),
                         company = new Model.Company()
                         {
                             companyId = reader["company_id"].ToString(),

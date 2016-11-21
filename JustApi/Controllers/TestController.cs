@@ -10,11 +10,11 @@ namespace JustApi.Controllers
 {
     public class TestController : ApiController
     {
-        public HttpResponseMessage Get()
+        public HttpResponseMessage Get(string jobId)
         {
             return new HttpResponseMessage()
             {
-                Content = new StringContent("GET: Test message")
+                Content = new StringContent(Utility.Utils.EncodeUniqueId(jobId))
             };
         }
 

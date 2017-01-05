@@ -57,8 +57,17 @@ namespace JustApi.Dao
                 insertParam.Add("owner_id", payload.ownerUserId);
                 insertParam.Add("job_type_id", payload.jobTypeId);
                 insertParam.Add("amount", payload.amount.ToString());
+                insertParam.Add("partner_amount", payload.amountPartner.ToString());
                 insertParam.Add("cash_on_delivery", payload.cashOnDelivery ? "1" : "0");
+
                 insertParam.Add("worker_assistance", payload.workerAssistant.ToString());
+                insertParam.Add("assemble_bed", payload.assembleBed.ToString());
+                insertParam.Add("assemble_dining_table", payload.assembleDiningTable.ToString());
+                insertParam.Add("assemble_wardrobe", payload.assembleWardrobe.ToString());
+                insertParam.Add("assemble_office_table", payload.assembleOfficeTable.ToString());
+                insertParam.Add("bubble_wrapping", payload.bubbleWrapping.ToString());
+                insertParam.Add("shrink_wrapping", payload.shrinkWrapping.ToString());
+
                 insertParam.Add("fleet_type_id", payload.fleetTypeId);
                 insertParam.Add("delivery_date", date.ToString("yyyy-MM-dd HH:mm:ss"));
                 insertParam.Add("remarks", payload.remarks.ToString());
@@ -215,17 +224,18 @@ namespace JustApi.Dao
                             jobTypeId = reader["job_type_id"].ToString(),
                             fleetTypeId = reader["fleet_type_id"].ToString(),
                             amount = (float)reader["amount"],
+                            amountPartner = (float)reader["partner_amount"],
                             amountPaid = (float)reader["amount_paid"],
                             cashOnDelivery = (int)reader["cash_on_delivery"] == 0 ? false : true,
                             workerAssistant = (int)reader["worker_assistance"],
-                            deliveryDate = reader["delivery_date"].ToString(),
+                            deliveryDate = reader.GetDateTime("delivery_date").ToString("yyyy-MM-dd HH:mm:ss"),
                             remarks = (string)reader["remarks"],
                             enabled = (int)reader["enabled"] == 0 ? false : true,
                             deleted = (int)reader["deleted"] == 0 ? false : true,
                             createdBy = reader["created_by"].ToString(),
-                            creationDate = reader["creation_date"].ToString(),
+                            creationDate = reader.GetDateTime("creation_date").ToString("yyyy-MM-dd HH:mm:ss"),
                             modifiedBy = reader["modify_by"].ToString(),
-                            lastModifiedDate = reader["last_modified_date"].ToString(),
+                            lastModifiedDate = reader.GetDateTime("last_modified_date").ToString("yyyy-MM-dd HH:mm:ss"),
                             jobStatusId = reader["job_status_id"] == null ? null : reader["job_status_id"].ToString(),
                             addressFrom = new List<Model.Address>(),
                             addressTo = new List<Model.Address>()
@@ -633,14 +643,14 @@ namespace JustApi.Dao
                     amountPaid = (float)reader["amount_paid"],
                     cashOnDelivery = (int)reader["cash_on_delivery"] == 0 ? false : true,
                     workerAssistant = (int)reader["worker_assistance"],
-                    deliveryDate = reader["delivery_date"].ToString(),
+                    deliveryDate = reader.GetDateTime("delivery_date").ToString("yyyy-MM-dd HH:mm:ss"),
                     remarks = (string)reader["remarks"],
                     enabled = (int)reader["enabled"] == 0 ? false : true,
                     deleted = (int)reader["deleted"] == 0 ? false : true,
                     createdBy = reader["created_by"].ToString(),
-                    creationDate = reader["creation_date"].ToString(),
+                    creationDate = reader.GetDateTime("creation_date").ToString("yyyy-MM-dd HH:mm:ss"),
                     modifiedBy = reader["modify_by"].ToString(),
-                    lastModifiedDate = reader["last_modified_date"].ToString(),
+                    lastModifiedDate = reader.GetDateTime("last_modified_date").ToString("yyyy-MM-dd HH:mm:ss"),
                     jobStatusId = reader["job_status_id"] == null ? null : reader["job_status_id"].ToString(),
                     addressFrom = addFromList,
                     addressTo = addToList
@@ -686,8 +696,9 @@ namespace JustApi.Dao
                     TABLE_NAME_ADDTO, TABLE_NAME_ADDRESS);
 
                 // job order status
-                query += string.Format("LEFT JOIN (SELECT job_status_id, job_id as jsId FROM {0} a " +
-                    "inner join (select max(last_modified_date) last_modified_date, job_id as jsId2 from {0} group by job_id) b ON a.job_id=b.jsId2 AND a.last_modified_date=b.last_modified_date AND job_status_id <> 1) jobStatus ON  jobStatus.jsId=jobDetails.id ", TABLE_NAME_JOBORDERSTATUS);
+                query += string.Format("INNER JOIN (SELECT job_status_id, job_id as jsId FROM {0} a " +
+                    "inner join (select max(last_modified_date) last_modified_date, job_id as jsId2 from {0} group by job_id) b ON a.job_id=b.jsId2 AND a.last_modified_date=b.last_modified_date AND job_status_id <> 1) jobStatus ON  jobStatus.jsId=jobDetails.id ", 
+                    TABLE_NAME_JOBORDERSTATUS);
 
                 //if (companyId != null)
                 //{

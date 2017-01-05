@@ -17,6 +17,8 @@ namespace JustApi.Dao
         private readonly string TABLE_JOB_STATUS = "job_order_status";
         private readonly string TABLE_FLEETS = "fleets";
 
+        private readonly string TABLE_JOBS = "jobs";
+
         public Model.DriverLocation GetByUserId(string userId)
         {
             MySqlCommand mySqlCmd = null;
@@ -249,6 +251,80 @@ namespace JustApi.Dao
             }
 
             return driverLocationList;
+        }
+
+        private IEnumerable<DateTime> EachDay(DateTime from, DateTime thru)
+        {
+            for (var day = from.Date; day.Date <= thru.Date; day = day.AddDays(1))
+                yield return day;
+        }
+
+        public Model.AdminStatistics getAdminStatistic(string dateStart, string dateEnd)
+        {
+
+            // prepare the listing
+            Model.AdminStatistics result = new Model.AdminStatistics();
+            result.total = new Model.Statistic();
+            result.statistics = new Dictionary<string, Model.Statistic>();
+
+            // get from database
+            MySqlCommand mySqlCmd = null;
+            MySqlDataReader reader = null;
+
+            var datetimeStart = DateTime.Parse(dateStart);
+            var datetimeEnd = DateTime.Parse(dateEnd);
+            foreach (DateTime day in EachDay(datetimeStart, datetimeEnd))
+            {
+                var statistic = new Model.Statistic();
+                result.statistics.Add(day.ToShortDateString(), statistic);
+
+                string query = string.Format("SELECT (SELECT COUNT(*) FROM {0} WHERE DATE(creation_date) = '{1}') AS userCount, " +
+                    "(SELECT COUNT(*) FROM {2} WHERE DATE(creation_date) = '{1}') AS companyCount, " +
+                    "(SELECT COUNT(*) FROM {3} WHERE DATE(creation_date) = '{1}') AS jobCount, " +
+                    "(SELECT COALESCE(SUM(amount), 0) FROM {3} WHERE DATE(creation_date) = '{1}') AS revenue, " +
+                    "(SELECT COALESCE(SUM(amount), 0)*0.1 FROM {3} WHERE DATE(creation_date) = '{1}') AS profit, " +
+                    "(SELECT COUNT(*) FROM {4} WHERE DATE(creation_date) = '{1}') AS fleetCount ",
+                    TABLE_USERS, day.ToString("yyyy-MM-dd"), TABLE_COMPANIES, TABLE_JOBS, TABLE_FLEETS);
+
+                mySqlCmd = new MySqlCommand(query);
+                reader = PerformSqlQuery(mySqlCmd);
+                if (reader.Read())
+                {
+                    statistic.numUniqueUsers = reader.GetInt32("userCount");
+                    statistic.numPartners = reader.GetInt32("companyCount");
+                    statistic.numJobs = reader.GetInt32("jobCount");
+                    statistic.numProfits = reader.GetFloat("profit");
+                    statistic.numRevenues = reader.GetFloat("revenue");
+                    statistic.numFleets = reader.GetInt32("fleetCount");
+                }
+
+                CleanUp(reader, mySqlCmd);
+            }
+
+
+            // get all the figures
+            string totalQuery = string.Format("SELECT (SELECT COUNT(*) FROM {0} WHERE DATE(creation_date) between '{4}' AND '{5}') AS userCount, " +
+                    "(SELECT COUNT(*) FROM {1} WHERE DATE(creation_date) between '{4}' AND '{5}') AS companyCount, " +
+                    "(SELECT COUNT(*) FROM {2} WHERE DATE(creation_date) between '{4}' AND '{5}') AS jobCount, " +
+                    "(SELECT COALESCE(SUM(amount), 0) FROM {2} WHERE DATE(creation_date) between '{4}' AND '{5}') AS revenue, " +
+                    "(SELECT COALESCE(SUM(amount), 0)*0.1 FROM {2} WHERE DATE(creation_date) between '{4}' AND '{5}') AS profit, " +
+                    "(SELECT COUNT(*) FROM {3} WHERE DATE(creation_date) between '{4}' AND '{5}') AS fleetCount ",
+                    TABLE_USERS, TABLE_COMPANIES, TABLE_JOBS, TABLE_FLEETS, datetimeStart.ToString("yyyy-MM-dd"), datetimeEnd.AddDays(1).ToString("yyyy-MM-dd"));
+
+            mySqlCmd = new MySqlCommand(totalQuery);
+            reader = PerformSqlQuery(mySqlCmd);
+            if (reader.Read())
+            {
+                result.total.numUniqueUsers = reader.GetInt32("userCount");
+                result.total.numPartners = reader.GetInt32("companyCount");
+                result.total.numJobs = reader.GetInt32("jobCount");
+                result.total.numProfits = reader.GetFloat("profit");
+                result.total.numRevenues = reader.GetFloat("revenue");
+                result.total.numFleets = reader.GetInt32("fleetCount");
+            }
+
+            CleanUp(reader, mySqlCmd);
+            return result;
         }
     }
 }

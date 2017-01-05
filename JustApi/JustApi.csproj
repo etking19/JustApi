@@ -145,6 +145,7 @@
     <Compile Include="Constants\NotificationMsg.cs" />
     <Compile Include="Controllers\ActivityController.cs" />
     <Compile Include="Controllers\AddressController.cs" />
+    <Compile Include="Controllers\AdminStatisticController.cs" />
     <Compile Include="Controllers\BaseController.cs" />
     <Compile Include="Controllers\CompanyController.cs" />
     <Compile Include="Controllers\CountryController.cs" />
@@ -178,6 +179,7 @@
     <Compile Include="Controllers\StatisticController.cs" />
     <Compile Include="Controllers\TestController.cs" />
     <Compile Include="Controllers\UserController.cs" />
+    <Compile Include="Controllers\UserTrackingController.cs" />
     <Compile Include="Controllers\VoucherController.cs" />
     <Compile Include="Dao\ActivityDao.cs" />
     <Compile Include="Dao\AddressDao.cs" />
@@ -208,6 +210,7 @@
     <Compile Include="Dao\SupportedAreaDao.cs" />
     <Compile Include="Dao\UsersDao.cs" />
     <Compile Include="Dao\UserSessionDao.cs" />
+    <Compile Include="Dao\UserTrackingDao.cs" />
     <Compile Include="Dao\VoucherDao.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
@@ -220,11 +223,14 @@
     <Compile Include="Model\Country.cs" />
     <Compile Include="Model\DeliveryError.cs" />
     <Compile Include="Model\DeliveryExtraService.cs" />
+    <Compile Include="Model\DeliveryPrice.cs" />
     <Compile Include="Model\Delivery\PriceDetails.cs" />
+    <Compile Include="Model\Delivery\RouteDetails.cs" />
     <Compile Include="Model\DriverLocation.cs" />
     <Compile Include="Model\Fleet.cs" />
     <Compile Include="Model\FleetType.cs" />
     <Compile Include="Model\Google\Direction.cs" />
+    <Compile Include="Model\Google\DistanceMatrix.cs" />
     <Compile Include="Model\Google\MapsGeocode.cs" />
     <Compile Include="Model\Ikea.cs" />
     <Compile Include="Model\JobDelivery.cs" />
@@ -241,6 +247,7 @@
     <Compile Include="Model\ResponseJobOrderStatus.cs" />
     <Compile Include="Model\Role.cs" />
     <Compile Include="Model\State.cs" />
+    <Compile Include="Model\Statistic.cs" />
     <Compile Include="Model\Token.cs" />
     <Compile Include="Model\User.cs" />
     <Compile Include="Model\Vouchers.cs" />

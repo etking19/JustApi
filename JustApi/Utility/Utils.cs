@@ -2,6 +2,9 @@
 using System.Net.Http;
 using JustApi.Model;
 using JustApi.Model.Google;
+using System;
+using JustApi.Model.Delivery;
+using System.Collections.Generic;
 
 namespace JustApi.Utility
 {
@@ -122,6 +125,144 @@ namespace JustApi.Utility
             } while (retryCount >= 0) ;
 
             return null;
+        }
+
+        public static DistanceMatrix GetDistance(GpsLocation from, GpsLocation[] to, int departureTime = 0, int arrivalTime = 0)
+        {
+            // https://maps.googleapis.com/maps/api/distancematrix/json?
+            // units =imperial&origins=40.6655101,-73.89188969999998&
+            // destinations =40.6905615%2C-73.9976592%7C40.6905615%2C-73.9976592%7C40.6905615%2C-73.9976592%7C40.6905615%2C-73.9976592%7C40.6905615%2C-73.9976592%7C40.6905615%2C-73.9976592%7C40.659569%2C-73.933783%7C40.729029%2C-73.851524%7C40.6860072%2C-73.6334271%7C40.598566%2C-73.7527626%7C40.659569%2C-73.933783%7C40.729029%2C-73.851524%7C40.6860072%2C-73.6334271%7C40.598566%2C-73.7527626&
+            // key =YOUR_API_KEY
+
+            string origin = string.Format("{0},{1}", from.lat, from.lng);
+
+            string destinationLoc = "";
+            foreach (GpsLocation gpsLoc in to)
+            {
+                destinationLoc += string.Format("{0},{1}|", gpsLoc.lat, gpsLoc.lng);
+            }
+            destinationLoc.Remove(destinationLoc.Length - 1);
+
+            var fullUrl = string.Format("https://maps.googleapis.com/maps/api/distancematrix/json?origins={0}&destinations={1}&key={2}",
+                origin, destinationLoc, System.Configuration.ConfigurationManager.AppSettings["GoogleApiKey"]);
+
+            if (departureTime != 0)
+            {
+                fullUrl += string.Format("&departure_time={0}", departureTime);
+            }
+
+            if (arrivalTime != 0)
+            {
+                fullUrl += string.Format("&arrival_time={0}", arrivalTime);
+            }
+
+            var result = "";
+            using (var client = new HttpClient())
+            {
+                var response = client.GetAsync(fullUrl).Result;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // by calling .Result you are performing a synchronous call
+                    var responseContent = response.Content;
+
+                    // by calling .Result you are synchronously reading the result
+                    result = responseContent.ReadAsStringAsync().Result;
+                }
+            }
+
+            return JsonConvert.DeserializeObject<DistanceMatrix>(result);
+        }
+
+        public static int GetEpochTime(DateTime time)
+        {
+            TimeSpan t = time - new DateTime(1970, 1, 1);
+            return (int)t.TotalSeconds;
+        }
+
+        public static RouteDetails[] GetSimpleRoute(GpsLocation from, GpsLocation to, GpsLocation[] location, DateTime departureTime)
+        {
+            // https://maps.googleapis.com/maps/api/directions/json?origin=3.138501,%20101.595983&
+            // destination =3.138501,101.595983&waypoints=optimize:true|3.083020,101.720428|3.070053,101.606896|3.131532,101.625198|3.101207,101.612382
+            // &key=AIzaSyArNVgfBbl4WUqHdu-ycAE-pL0TGvok8Us
+
+            string waypointLoc = "waypoints=optimize:true";
+            foreach (GpsLocation gpsLoc in location)
+            {
+                waypointLoc += string.Format("|{0},{1}", gpsLoc.lat, gpsLoc.lng);
+            }
+
+            string fullUrl = string.Format("https://maps.googleapis.com/maps/api/directions/json?origin={0},{1}&destination={2},{3}&{4}&key={5}", 
+                from.lat, from.lng, to.lat, to.lng, waypointLoc, System.Configuration.ConfigurationManager.AppSettings["GoogleApiKey"]);
+
+            var result = "";
+            using (var client = new HttpClient())
+            {
+                var response = client.GetAsync(fullUrl).Result;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // by calling .Result you are performing a synchronous call
+                    var responseContent = response.Content;
+
+                    // by calling .Result you are synchronously reading the result
+                    result = responseContent.ReadAsStringAsync().Result;
+                }
+            }
+
+            Direction jsonObj = JsonConvert.DeserializeObject<Direction>(result);
+
+            List<RouteDetails> routeDetailsList = new List<RouteDetails>();
+            foreach (int orderId in jsonObj.routes[0].waypoint_order)
+            {
+                routeDetailsList.Add(new RouteDetails() { gpsLocation = location[orderId] });
+            }
+
+            return routeDetailsList.ToArray();
+        }
+
+        public static int GetSimpleRouteDistance(GpsLocation from, GpsLocation to, GpsLocation[] location)
+        {
+            // https://maps.googleapis.com/maps/api/directions/json?origin=3.138501,%20101.595983&
+            // destination =3.138501,101.595983&waypoints=optimize:true|3.083020,101.720428|3.070053,101.606896|3.131532,101.625198|3.101207,101.612382
+            // &key=AIzaSyArNVgfBbl4WUqHdu-ycAE-pL0TGvok8Us
+
+            string waypointLoc = "waypoints=optimize:true";
+            foreach (GpsLocation gpsLoc in location)
+            {
+                waypointLoc += string.Format("|{0},{1}", gpsLoc.lat, gpsLoc.lng);
+            }
+
+            string fullUrl = string.Format("https://maps.googleapis.com/maps/api/directions/json?origin={0},{1}&destination={2},{3}&{4}&key={5}",
+                from.lat, from.lng, to.lat, to.lng, waypointLoc, System.Configuration.ConfigurationManager.AppSettings["GoogleApiKey"]);
+
+            var result = "";
+            using (var client = new HttpClient())
+            {
+                var response = client.GetAsync(fullUrl).Result;
+
+                if (response.IsSuccessStatusCode)
+                {
+                    // by calling .Result you are performing a synchronous call
+                    var responseContent = response.Content;
+
+                    // by calling .Result you are synchronously reading the result
+                    result = responseContent.ReadAsStringAsync().Result;
+                }
+            }
+
+            Direction jsonObj = JsonConvert.DeserializeObject<Direction>(result);
+
+            var distance = 0;
+            foreach (Route route in jsonObj.routes)
+            {
+                foreach (Leg leg in route.legs)
+                {
+                    distance += leg.duration.value;
+                }
+            }
+
+            return distance;
         }
 
         public static string Base64Encode(string plainText)

@@ -15,7 +15,7 @@ namespace JustApi.Controllers
     public class JobController : BaseController
     {
         public Response Get(string jobId = null, string uniqueId = null, string ownerId = null,
-            string jobTypeId=null, string fromDate =null, string toDate=null, string limit=null, string skip=null)
+            string jobTypeId = null, string fromDate = null, string toDate = null, string limit = null, string skip = null)
         {
             if (jobId != null)
             {
@@ -129,7 +129,7 @@ namespace JustApi.Controllers
                         return response;
                     }
                 }
-
+                 
                 // get the gps coordinate if not passed in
                 // get the state id and country id if not passed in
                 foreach (Model.Address address in jobDetails.addressFrom)
@@ -203,6 +203,11 @@ namespace JustApi.Controllers
                     }
                 }
 
+                if (jobDetails.addressTo == null)
+                {
+                    jobDetails.addressTo = new List<Model.Address>();
+                }
+
                 foreach (Model.Address address in jobDetails.addressTo)
                 {
                     if (address.gpsLongitude == 0 ||
@@ -274,6 +279,32 @@ namespace JustApi.Controllers
                     }
                 }
 
+                // handle if partner amount is not present
+                if (jobDetails.amountPartner == 0)
+                {
+                    if (jobDetails.jobTypeId == ((int)JustApi.Constants.Configuration.DeliveryJobType.Standard).ToString())
+                    {
+                        // standard delivery
+
+                        // find the partner price for distance in this distance
+                        StandardDeliveryController tempController = new StandardDeliveryController();
+                        var priceDetails = tempController.GetPrice(jobDetails.distance.ToString(), jobDetails.fleetTypeId,
+                            jobDetails.addressFrom[0].buildingType, jobDetails.addressTo[0].buildingType, jobDetails.workerAssistant.ToString(),
+                            jobDetails.assembleBed.ToString(), jobDetails.assembleDiningTable.ToString(), jobDetails.assembleWardrobe.ToString(), 
+                            jobDetails.assembleOfficeTable.ToString(),
+                            jobDetails.bubbleWrapping.ToString(), jobDetails.shrinkWrapping.ToString());
+
+                        jobDetails.amountPartner = priceDetails.partnerTotal;
+                    }
+                    else if(jobDetails.jobTypeId == ((int)JustApi.Constants.Configuration.DeliveryJobType.Disposal).ToString())
+                    {
+                        // disposal
+                        DisposalDeliveryController tempController = new DisposalDeliveryController();
+                        var priceDetails = tempController.GetPrice(jobDetails.fleetTypeId, jobDetails.addressFrom[0].buildingType, promoCode);
+
+                        jobDetails.amountPartner = priceDetails.partnerTotal;
+                    }
+                }
 
                 // add the job details
                 jobDetails.createdBy = userId;
@@ -325,7 +356,8 @@ namespace JustApi.Controllers
                 // send notification to creator
                 var clientIdentifiers = userDao.GetDeviceIdentifier(userId);
                 var msg = NotificationMsg.NewJob_Desc + uniqueId;
-                if (clientIdentifiers != null)
+                if (clientIdentifiers != null &&
+                    clientIdentifiers.Count != 0)
                 {
                     // user have app installed and identifier found, send push notification
                     var extraData = Helper.PushNotification.ConstructExtraData(Helper.PushNotification.ECategories.OrderCreated, uniqueId);

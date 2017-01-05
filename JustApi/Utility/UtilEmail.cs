@@ -12,44 +12,87 @@ namespace JustApi.Utility
         {
             Task.Run(async () =>
              {
-                 // send email
-                 String apiKey = ConfigurationManager.AppSettings.Get("SendGridApiKey");
-                 dynamic sg = new SendGrid.SendGridAPIClient(apiKey, "https://api.sendgrid.com");
-
-                 Email from = new Email("care@justlorry.com");
-                 String subject = ConfigurationManager.AppSettings.Get("InvoiceSubject") + string.Format("(Order ID: {0})", jobUniqueId);
-                 Email to = new Email(user.email);
-                 Content content = new Content("text/html", subject);
-                 Mail mail = new Mail(from, subject, to, content);
-
-                 mail.TemplateId = ConfigurationManager.AppSettings.Get("InvoiceTemplateId");
-                 mail.Personalization[0].AddSubstitution("{{orderId}}", jobUniqueId);
-                 mail.Personalization[0].AddSubstitution("{{name}}", user.displayName);
-                 mail.Personalization[0].AddSubstitution("{{contact}}", user.contactNumber);
-                 mail.Personalization[0].AddSubstitution("{{email}}", user.email);
-                 mail.Personalization[0].AddSubstitution("{{date}}", jobDetails.deliveryDate);
-                 mail.Personalization[0].AddSubstitution("{{jobType}}", jobType);
-                 mail.Personalization[0].AddSubstitution("{{fleetType}}", fleetType);
-                 mail.Personalization[0].AddSubstitution("{{amount}}", jobDetails.amount.ToString());
-                 mail.Personalization[0].AddSubstitution("{{paymentLink}}", paymentUrl);
-
-                 var addressFrom = jobDetails.addressFrom[0];
-                 mail.Personalization[0].AddSubstitution("{{from}}", addressFrom.address1 + ", " + addressFrom.address2 + ", " + addressFrom.address3);
-
                  try
                  {
-                     var addressTo = jobDetails.addressTo[0];
-                     if (addressTo != null)
+                     // send email
+                     String apiKey = ConfigurationManager.AppSettings.Get("SendGridApiKey");
+                     dynamic sg = new SendGrid.SendGridAPIClient(apiKey);
+
+                     Email from = new Email("care@justlorry.com", "JustLorry");
+                     String subject = ConfigurationManager.AppSettings.Get("InvoiceSubject") + string.Format("(Order ID: {0})", jobUniqueId);
+                     Email to = new Email(user.email, user.displayName);
+                     Content content = new Content("text/html", subject);
+                     Mail mail = new Mail(from, subject, to, content);
+
+                     mail.TemplateId = ConfigurationManager.AppSettings.Get("InvoiceTemplateId");
+                     mail.Personalization[0].AddSubstitution("{{orderId}}", jobUniqueId);
+                     mail.Personalization[0].AddSubstitution("{{name}}", user.displayName);
+                     mail.Personalization[0].AddSubstitution("{{contact}}", user.contactNumber);
+                     mail.Personalization[0].AddSubstitution("{{email}}", user.email);
+                     mail.Personalization[0].AddSubstitution("{{date}}", jobDetails.deliveryDate);
+                     mail.Personalization[0].AddSubstitution("{{jobType}}", jobType);
+                     mail.Personalization[0].AddSubstitution("{{fleetType}}", fleetType);
+                     mail.Personalization[0].AddSubstitution("{{amount}}", jobDetails.amount.ToString());
+                     mail.Personalization[0].AddSubstitution("{{paymentLink}}", paymentUrl);
+
+                     var addressFrom = jobDetails.addressFrom[0];
+                     mail.Personalization[0].AddSubstitution("{{from}}", addressFrom.address1 + ", " + addressFrom.address2 + ", " + addressFrom.address3);
+
+                     try
                      {
-                         mail.Personalization[0].AddSubstitution("{{to}}", addressTo.address1 + ", " + addressTo.address2 + ", " + addressTo.address3);
+                         var addressTo = jobDetails.addressTo[0];
+                         if (addressTo != null)
+                         {
+                             mail.Personalization[0].AddSubstitution("{{to}}", addressTo.address1 + ", " + addressTo.address2 + ", " + addressTo.address3);
+                         }
                      }
+                     catch (Exception)
+                     {
+                         mail.Personalization[0].AddSubstitution("{{to}}", "");
+                     }
+
+                     dynamic response = await sg.client.mail.send.post(requestBody: mail.Get());
+
+
+                     // send to self as multiple email not supported
+                     to = new Email("denell@justlorry.com");
+                     mail = new Mail(from, subject, to, content);
+
+                     mail.TemplateId = ConfigurationManager.AppSettings.Get("InvoiceTemplateId");
+                     mail.Personalization[0].AddSubstitution("{{orderId}}", jobUniqueId);
+                     mail.Personalization[0].AddSubstitution("{{name}}", user.displayName);
+                     mail.Personalization[0].AddSubstitution("{{contact}}", user.contactNumber);
+                     mail.Personalization[0].AddSubstitution("{{email}}", user.email);
+                     mail.Personalization[0].AddSubstitution("{{date}}", jobDetails.deliveryDate);
+                     mail.Personalization[0].AddSubstitution("{{jobType}}", jobType);
+                     mail.Personalization[0].AddSubstitution("{{fleetType}}", fleetType);
+                     mail.Personalization[0].AddSubstitution("{{amount}}", jobDetails.amount.ToString());
+                     mail.Personalization[0].AddSubstitution("{{paymentLink}}", paymentUrl);
+
+                     addressFrom = jobDetails.addressFrom[0];
+                     mail.Personalization[0].AddSubstitution("{{from}}", addressFrom.address1 + ", " + addressFrom.address2 + ", " + addressFrom.address3);
+
+                     try
+                     {
+                         var addressTo = jobDetails.addressTo[0];
+                         if (addressTo != null)
+                         {
+                             mail.Personalization[0].AddSubstitution("{{to}}", addressTo.address1 + ", " + addressTo.address2 + ", " + addressTo.address3);
+                         }
+                     }
+                     catch (Exception)
+                     {
+                         mail.Personalization[0].AddSubstitution("{{to}}", "");
+                     }
+
+                     response = await sg.client.mail.send.post(requestBody: mail.Get());
+
                  }
-                 catch (Exception)
+                 catch (Exception ex)
                  {
-                     mail.Personalization[0].AddSubstitution("{{to}}", "");
+                     Console.WriteLine(ex);
                  }
 
-                 dynamic response = await sg.client.mail.send.post(requestBody: mail.Get());
 
              });
             
@@ -62,11 +105,11 @@ namespace JustApi.Utility
             {
                 // send email
                 String apiKey = ConfigurationManager.AppSettings.Get("SendGridApiKey");
-                dynamic sg = new SendGrid.SendGridAPIClient(apiKey, "https://api.sendgrid.com");
+                dynamic sg = new SendGrid.SendGridAPIClient(apiKey);
 
-                Email from = new Email("care@justlorry.com");
-                String subject = ConfigurationManager.AppSettings.Get("InvoiceSubject") + string.Format("(Order ID: {0})", jobId);
-                Email to = new Email("care@justlorry.com");
+                Email from = new Email("care@justlorry.com", "JustLorry");
+                String subject = ConfigurationManager.AppSettings.Get("InvoiceSubject") + string.Format("(Payment received. Order ID: {0})", jobId);
+                Email to = new Email("care@justlorry.com", "JustLorry");
                 Content content = new Content("text/html", subject);
                 Mail mail = new Mail(from, subject, to, content);
 
@@ -108,7 +151,7 @@ namespace JustApi.Utility
             Task.Run(async () =>
             {
                 String apiKey = ConfigurationManager.AppSettings.Get("SendGridApiKey");
-                dynamic sg = new SendGrid.SendGridAPIClient(apiKey, "https://api.sendgrid.com");
+                dynamic sg = new SendGrid.SendGridAPIClient(apiKey);
 
                 Email from = new Email("care@justlorry.com");
                 String subject = ConfigurationManager.AppSettings.Get("ConfirmSubject") + string.Format("(Order ID: {0})", jobUniqueId);
@@ -152,7 +195,7 @@ namespace JustApi.Utility
             Task.Run(async () =>
             {
                 String apiKey = ConfigurationManager.AppSettings.Get("SendGridApiKey");
-                dynamic sg = new SendGrid.SendGridAPIClient(apiKey, "https://api.sendgrid.com");
+                dynamic sg = new SendGrid.SendGridAPIClient(apiKey);
 
                 Email from = new Email("care@justlorry.com");
                 String subject = ConfigurationManager.AppSettings.Get("DeliveredSubject").Replace("{{orderId}}", orderId);
@@ -174,11 +217,11 @@ namespace JustApi.Utility
             {
                 // send email
                 String apiKey = ConfigurationManager.AppSettings.Get("SendGridApiKey");
-                dynamic sg = new SendGrid.SendGridAPIClient(apiKey, "https://api.sendgrid.com", "v3");
+                dynamic sg = new SendGrid.SendGridAPIClient(apiKey);
 
                 Email from = new Email("care@justlorry.com", "JustLorry");
                 String subject = ConfigurationManager.AppSettings.Get("OrderReceivedSubject") + string.Format("(IKEA ORDER: {0})", project.name);
-                Email to = new Email("denell@justlorry.com", "JustLorry");
+                Email to = new Email("care@justlorry.com", "JustLorry");
                 Content content = new Content("text/html", subject);
                 Mail mail = new Mail(from, subject, to, content);
 

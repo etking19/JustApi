@@ -10,5 +10,6 @@ namespace JustApi.Model
         public string id { get; set; }
         public string name { get; set; }
         public float value { get; set; }
+        public float partnerValue { get; set; }
     }
 }

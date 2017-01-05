@@ -4,6 +4,7 @@ using JustApi.Utility;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -16,6 +17,58 @@ namespace JustApi.Controllers
     {
         public void Post([FromBody]Model.BillPlz.Bill bill)
         {
+            try
+            {
+                if (ConfigurationManager.AppSettings.Get("Debug") != "1")
+                {
+                    // Debug mode, push the notification straight away
+
+                    var debugJobId = Utils.DecodeUniqueId(bill.reference_1);
+                    var debugJobDetails = jobDetailsDao.GetByJobId(debugJobId);
+                    if (debugJobDetails == null)
+                    {
+                        DBLogger.GetInstance().Log(DBLogger.ESeverity.Info, string.Format("Debug - Payment callback does not found job details. Job id: {0}, PaymentId: {1}. {2}", debugJobId, bill.id, bill));
+                        return;
+                    }
+
+                    var extraDataPartner = Helper.PushNotification.ConstructExtraData(Helper.PushNotification.ECategories.NewOpenJob, debugJobId);
+                    var partnerListIdentifiers = userDao.GetUserIdentifiersByRoleId(((int)Constants.Configuration.Role.CompanyAdmin).ToString());
+                    if (int.Parse(debugJobDetails.jobTypeId) == (int)Constants.Configuration.DeliveryJobType.Standard)
+                    {
+                        Utility.UtilNotification.BroadCastMessage(
+                            partnerListIdentifiers.ToArray(),
+                            extraDataPartner,
+                            NotificationMsg.NewOpenJob_Title,
+                            NotificationMsg.NewOpenJob_Desc + string.Format("From: {0}\nTo: {1}\nAmount:{2}",
+                                debugJobDetails.addressFrom[0].address3,
+                                debugJobDetails.addressTo[0].address3,
+                                debugJobDetails.amountPartner)
+                            );
+                    }
+                    else if (int.Parse(debugJobDetails.jobTypeId) == (int)Constants.Configuration.DeliveryJobType.Disposal)
+                    {
+                        Utility.UtilNotification.BroadCastMessage(
+                            partnerListIdentifiers.ToArray(),
+                            extraDataPartner,
+                            NotificationMsg.NewOpenJob_Title,
+                            NotificationMsg.NewOpenJob_Desc + string.Format("Dispose items from: {0}\nAmount:{1}",
+                                debugJobDetails.addressFrom[0].address3,
+                                debugJobDetails.amountPartner)
+                            );
+                    }
+
+                    // do not proceed for debug mode
+                    return;
+                }
+            }
+            catch (Exception e)
+            {
+                DBLogger.GetInstance().Log(DBLogger.ESeverity.Critical, e.Message);
+                return;
+            }
+            
+
+
             var jobId = Utils.DecodeUniqueId(bill.reference_1);
             var jobDetails = jobDetailsDao.GetByJobId(jobId);
             if (jobDetails == null)
@@ -78,7 +131,7 @@ namespace JustApi.Controllers
                             NotificationMsg.NewOpenJob_Desc + string.Format("From: {0}\nTo: {1}\nAmount:{2}",
                                 jobDetails.addressFrom[0].address3,
                                 jobDetails.addressTo[0].address3,
-                                jobDetails.amount * 0.9)
+                                jobDetails.amountPartner)
                             );
                     }
                     else if (int.Parse(jobDetails.jobTypeId) == (int)Constants.Configuration.DeliveryJobType.Disposal)
@@ -89,7 +142,7 @@ namespace JustApi.Controllers
                             NotificationMsg.NewOpenJob_Title,
                             NotificationMsg.NewOpenJob_Desc + string.Format("Dispose items from: {0}\nAmount:{1}",
                                 jobDetails.addressFrom[0].address3,
-                                jobDetails.amount * 0.9)
+                                jobDetails.amountPartner)
                             );
                     }
 

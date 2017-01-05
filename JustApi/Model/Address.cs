@@ -8,22 +8,21 @@ namespace JustApi.Model
 {
     public class Address
     {
-        public string addressId;
-        public string address1;
-        public string address2;
-        public string address3;
-        public string stateId;
-        public string countryId;
-        public string postcode;
-        public float gpsLongitude;
-        public float gpsLatitude;
-        public string contactPerson;
-        public string contact;
+        public string addressId { get; set; }
+        public string address1 { get; set; }
+        public string address2 { get; set; }
+        public string address3 { get; set; }
+        public string stateId { get; set; }
+        public string countryId { get; set; }
+        public string postcode { get; set; }
+        public float gpsLongitude { get; set; }
+        public float gpsLatitude { get; set; }
+        public string contactPerson { get; set; }
+        public string contact { get; set; }
 
-        public string createdBy;
-
-        public string creationDate;
-
-        public string lastModifiedDate;
+        public string buildingType { get; set; }
+        public string createdBy { get; set; }
+        public string creationDate { get; set; }
+        public string lastModifiedDate { get; set; }
     }
 }

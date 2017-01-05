@@ -11,22 +11,30 @@ namespace JustApi.Dao
     {
         private readonly string TABLE_DELIVERY_PRICE = "delivery_price";
 
-        public float GetPrice(string distance, string fleetTypeId)
+        public Model.DeliveryPrice GetPrice(string distance, string fleetTypeId)
         {
             MySqlCommand mySqlCmd = null;
             MySqlDataReader reader = null;
             try
             {
-                string query = string.Format("SELECT price as price FROM {0} WHERE {1} BETWEEN min AND max and fleet_type_id={2}",
+                string query = string.Format("SELECT * FROM {0} WHERE {1} BETWEEN min AND max and fleet_type_id={2}",
                     TABLE_DELIVERY_PRICE, distance, fleetTypeId);
-
 
                 mySqlCmd = new MySqlCommand(query);
                 reader = PerformSqlQuery(mySqlCmd);
                 
                 if (reader.Read())
                 {
-                    return reader.GetFloat("price");
+                    return new Model.DeliveryPrice()
+                    {
+                        id = reader["id"].ToString(),
+                        min = reader.GetInt32("min"),
+                        max = reader.GetInt32("max"),
+                        fleet_type_id = reader.GetInt32("fleet_type_id"),
+                        price = reader.GetFloat("price"),
+                        partner_price = reader.GetFloat("partner_price"),
+                        last_modified = reader["last_modified"].ToString()
+                    };
                 }
             }
             catch (Exception e)
@@ -39,7 +47,7 @@ namespace JustApi.Dao
                 CleanUp(reader, mySqlCmd);
             }
 
-            return 0;
+            return null;
         }
     }
 }

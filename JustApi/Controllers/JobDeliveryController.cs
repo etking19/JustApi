@@ -106,6 +106,14 @@ namespace JustApi.Controllers
             // pre-caution step to avoid the job delivery cancelled
             jobDeclineDao.Remove(jobId, companyId);
 
+            // update the job order status
+            if (false == jobDeliveryDao.UpdateJobStatus(jobId, ((int)Constants.Configuration.JobStatus.OrderReceived).ToString()))
+            {
+                DBLogger.GetInstance().Log(DBLogger.ESeverity.Critical, string.Format("unable to update job status after partner accept the job."));
+                response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EJobNotFound);
+                return response;
+            }
+
             // send email to notify user
             JobDetails jobDetails = jobDetailsDao.GetByJobId(jobId);
             User userDetails = userDao.GetUserById(jobDetails.ownerUserId);

@@ -20,6 +20,7 @@ namespace JustApi.Model.Google
     {
         public Bound bounds { get; set; }
         public List<Leg> legs { get; set; }
+        public List<int> waypoint_order;
     }
 
     public class Bound
@@ -38,6 +39,7 @@ namespace JustApi.Model.Google
     {
         public Distance distance { get; set; }
         public Duration duration { get; set; }
+        public List<Steps> steps { get; set; }
     }
 
     public class Distance
@@ -50,6 +52,13 @@ namespace JustApi.Model.Google
     {
         public string text { get; set; }
         public int value { get; set; }
+    }
+
+    public class Steps
+    {
+        public Distance distance { get; set; }
+        public Duration duration { get; set; }
+
     }
 
 

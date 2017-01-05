@@ -7,41 +7,34 @@ namespace JustApi.Controllers
 {
     public class StandardDeliveryController : BaseController
     {
-        public Response Get(string distance, string lorryType, string fromBuildingType, string toBuildingType, string labor,
-            string assembleBed, string assemblyDining, string assemblyWardrobe, string assemblyTable, string promoCode)
+        [NonAction]
+        public PriceDetails GetPrice(string distance, string lorryType, string fromBuildingType = null, string toBuildingType = null, string labor = null,
+            string assembleBed = null, string assemblyDining = null, string assemblyWardrobe = null, string assemblyTable = null, 
+            string bubbleWrapping = null, string shrinkWrapping = null, string promoCode = null)
         {
-            // modify the tonne pass in to type id accordingly
-            var lorryId = 0;
-            switch (int.Parse(lorryType))
+            // calculate the transport cost
+            var transportCost = deliveryPriceDao.GetPrice(distance, lorryType);
+            if (transportCost == null)
             {
-                case (int)Constants.Configuration.LorryType.Lorry_1tonne:
-                    lorryId = 1;
-                    break;
-                case (int)Constants.Configuration.LorryType.Lorry_3tonne:
-                    lorryId = 2;
-                    break;
-                case (int)Constants.Configuration.LorryType.Lorry_5tonne:
-                    lorryId = 3;
-                    break;
-                default:
-                    response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EParameterError);
-                    return response;
-            }
-
-            var transportCost = deliveryPriceDao.GetPrice(distance, lorryId.ToString());
-            if (transportCost == 0)
-            {
-                response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EParameterError);
-                return response;
+                return null;
             }
 
             PriceDetails priceDetails = new PriceDetails();
-            priceDetails.total = transportCost;
+            priceDetails.total = transportCost.price;
+            priceDetails.partnerTotal = transportCost.partner_price;
+
+            // break down the cost
+            priceDetails.fuel = 0.4f * priceDetails.partnerTotal;
+            priceDetails.maintenance = 0.35f * priceDetails.partnerTotal;
+            priceDetails.labor = 0.25f * priceDetails.partnerTotal;
 
             var additionalService = deliveryAdditionalDao.Get();
+            int laborCount = 0;
             if (fromBuildingType != null &&
                 toBuildingType != null &&
-                labor != null)
+                labor != null &&
+                int.TryParse(labor, out laborCount) &&
+                laborCount != 0)
             {
                 DeliveryExtraService laborCost = null;
 
@@ -63,78 +56,143 @@ namespace JustApi.Controllers
 
                 if (laborCost == null)
                 {
-                    response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
-                    return response;
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, fromBuildingType + " " + toBuildingType);
+                    return null;
                 }
 
-                var addCost = int.Parse(labor) * laborCost.value;
+                var addCost = laborCount * laborCost.value;
+                var addPartnerCost = laborCount * laborCost.partnerValue;
+
                 priceDetails.total += addCost;
-                priceDetails.labor = addCost;
+                priceDetails.partnerTotal += addPartnerCost;
+
+                priceDetails.labor += addPartnerCost;
             }
 
-            if (assembleBed != null)
+            int assembleBedCount = 0;
+            if (assembleBed != null &&
+                int.TryParse(assembleBed, out assembleBedCount) &&
+                assembleBedCount != 0)
             {
                 var cost = additionalService.Find(t => t.name.CompareTo("assemble-bed") == 0);
                 if (cost == null)
                 {
-                    response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
-                    return response;
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, "assembleBed: " + assembleBed);
+                    return null;
                 }
 
-                var addCost = int.Parse(assembleBed) * cost.value;
+                var addCost = assembleBedCount * cost.value;
+                var addPartnerCost = assembleBedCount * cost.partnerValue;
+
                 priceDetails.total += addCost;
-                priceDetails.labor += addCost;
+                priceDetails.partnerTotal += addPartnerCost;
+
+                priceDetails.labor += addPartnerCost;
             }
 
-            if (assemblyDining != null)
+            int assembleDiningCount = 0;
+            if (assemblyDining != null &&
+                int.TryParse(assemblyDining, out assembleDiningCount) &&
+                assembleDiningCount != 0)
             {
                 var cost = additionalService.Find(t => t.name.CompareTo("assemble-diningtable") == 0);
                 if (cost == null)
                 {
-                    response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
-                    return response;
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, "assembleBed: " + assemblyDining);
+                    return null;
                 }
 
-                var addCost = int.Parse(assemblyDining) * cost.value;
+                var addCost = assembleDiningCount * cost.value;
+                var addPartnerCost = assembleDiningCount * cost.partnerValue;
+
                 priceDetails.total += addCost;
-                priceDetails.labor += addCost;
+                priceDetails.partnerTotal += addPartnerCost;
+
+                priceDetails.labor += addPartnerCost;
             }
 
-
-            if (assemblyTable != null)
+            int assembleTableCount = 0;
+            if (assemblyTable != null &&
+                int.TryParse(assemblyTable, out assembleTableCount) &&
+                assembleTableCount != 0)
             {
                 var cost = additionalService.Find(t => t.name.CompareTo("assemble-table") == 0);
                 if (cost == null)
                 {
-                    response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
-                    return response;
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, "assemblyTable: " + assemblyTable);
+                    return null;
                 }
 
-                var addCost = int.Parse(assemblyTable) * cost.value;
+                var addCost = assembleTableCount * cost.value;
+                var addPartnerCost = assembleTableCount * cost.partnerValue;
+
                 priceDetails.total += addCost;
-                priceDetails.labor += addCost;
+                priceDetails.partnerTotal += addPartnerCost;
+
+                priceDetails.labor += addPartnerCost;
             }
 
-            if (assemblyWardrobe != null)
+            int assemblyWardrobeCount = 0;
+            if (assemblyWardrobe != null &&
+                int.TryParse(assemblyWardrobe, out assemblyWardrobeCount) &&
+                assemblyWardrobeCount != 0)
             {
                 var cost = additionalService.Find(t => t.name.CompareTo("assemble-wardrobe") == 0);
                 if (cost == null)
                 {
-                    response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
-                    return response;
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, "assemblyWardrobe: " + assemblyWardrobe);
+                    return null;
                 }
 
-                var addCost = int.Parse(assemblyTable) * cost.value;
+                var addCost = assemblyWardrobeCount * cost.value;
+                var addPartnerCost = assemblyWardrobeCount * cost.partnerValue;
+
                 priceDetails.total += addCost;
-                priceDetails.labor += addCost;
+                priceDetails.partnerTotal += addPartnerCost;
+
+                priceDetails.labor += addPartnerCost;
             }
 
-            // break down the cost
-            priceDetails.fuel = 0.35f * transportCost;
-            priceDetails.maintenance = 0.25f * transportCost;
-            priceDetails.labor += 0.15f * transportCost;
-            priceDetails.partner = 0.15f * transportCost;
-            priceDetails.justlorry = 0.10f * transportCost;
+            int bubbleWrappingCount = 0;
+            if (bubbleWrapping != null &&
+                int.TryParse(bubbleWrapping, out bubbleWrappingCount) &&
+                bubbleWrappingCount != 0)
+            {
+                var cost = additionalService.Find(t => t.name.CompareTo("bubble-wrap") == 0);
+                if (cost == null)
+                {
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, "bubbleWrapping: " + bubbleWrapping);
+                    return null;
+                }
+
+                var addCost = bubbleWrappingCount * cost.value;
+                var addPartnerCost = bubbleWrappingCount * cost.partnerValue;
+
+                priceDetails.total += addCost;
+                priceDetails.partnerTotal += addPartnerCost;
+            }
+
+            int shrinkWrappingCount = 0;
+            if (shrinkWrapping != null &&
+                int.TryParse(shrinkWrapping, out shrinkWrappingCount) &&
+                shrinkWrappingCount != 0)
+            {
+                var cost = additionalService.Find(t => t.name.CompareTo("shrink-wrap") == 0);
+                if (cost == null)
+                {
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Warning, "shrinkWrapping: " + shrinkWrapping);
+                    return null;
+                }
+
+                var addCost = shrinkWrappingCount * cost.value;
+                var addPartnerCost = shrinkWrappingCount * cost.partnerValue;
+
+                priceDetails.total += addCost;
+                priceDetails.partnerTotal += addPartnerCost;
+            }
+
+            priceDetails.partner = priceDetails.partnerTotal;
+            priceDetails.justlorry = priceDetails.total - priceDetails.partnerTotal;
 
             // discount voucher
             if (promoCode != null)
@@ -181,6 +239,24 @@ namespace JustApi.Controllers
             {
                 priceDetails.total = 0;
             }
+
+            return priceDetails;
+        }
+
+        public Response Get(string distance, string lorryType, string fromBuildingType = null, string toBuildingType = null, string labor = null,
+            string assembleBed = null, string assemblyDining = null, string assemblyWardrobe = null, string assemblyTable = null,
+            string bubbleWrapping = null, string shrinkWrapping = null, string promoCode = null)
+        {
+            // compulsory field
+            if (lorryType == null ||
+                distance == null)
+            {
+                response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EParameterError);
+                return response;
+            }
+
+            var priceDetails = GetPrice(distance, lorryType, fromBuildingType, toBuildingType, labor, assembleBed,
+                assemblyDining, assemblyWardrobe, assemblyTable, bubbleWrapping, shrinkWrapping, promoCode);
 
             response.payload = javaScriptSerializer.Serialize(priceDetails);
             response = Utility.Utils.SetResponse(response, true, Constant.ErrorCode.ESuccess);

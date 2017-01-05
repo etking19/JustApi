@@ -28,7 +28,8 @@ namespace JustApi.Dao
                     {
                         id = reader["id"].ToString(),
                         name = reader["name"].ToString(),
-                        value = reader.GetFloat("value")
+                        value = reader.GetFloat("value"),
+                        partnerValue = reader.GetFloat("partner_value")
                     });
                 }
 

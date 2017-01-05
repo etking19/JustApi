@@ -21,9 +21,9 @@ namespace JustApi.Constants
 
         public enum BuildingType
         {
-            Landed = 1,
+            HighRise_lift = 1,
             HighRise_nolift = 2,
-            HighRise_lift = 3
+            Landed = 3
         };
 
         public enum VoucherType
@@ -31,14 +31,6 @@ namespace JustApi.Constants
             Percentage = 1,
             Value = 2
         };
-
-        public enum LorryType
-        {
-            Lorry_1tonne = 1,
-            Lorry_3tonne = 3,
-            Lorry_5tonne = 5,
-            Lorry_10tonne = 10
-        }
 
         public enum Role
         {

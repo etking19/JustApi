@@ -4,6 +4,7 @@ using JustApi.Utility;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Configuration;
 using System.IO;
 using System.Linq;
@@ -17,6 +18,13 @@ namespace JustApi.Controllers
     {
         public void Post([FromBody]Model.BillPlz.Bill bill)
         {
+            foreach (PropertyDescriptor descriptor in TypeDescriptor.GetProperties(bill))
+            {
+                string name = descriptor.Name;
+                object value = descriptor.GetValue(bill);
+                DBLogger.GetInstance().Log(DBLogger.ESeverity.Info, name + ": " + value);
+            }
+
             try
             {
                 if (ConfigurationManager.AppSettings.Get("Debug") != "1")
@@ -97,12 +105,11 @@ namespace JustApi.Controllers
 
                     // add to database
                     var id = paymentsDao.AddOrUpdate(bill.reference_1, jsonObj);
-                    if (id == "0")
+                    if (id == null || id == "0")
                     {
-                        DBLogger.GetInstance().Log(DBLogger.ESeverity.Critical, string.Format("Payment callback unable to update database. Job id: {0}, PaymentId: {1}. {2}", jobId, bill.id, bill));
+                        DBLogger.GetInstance().Log(DBLogger.ESeverity.Critical, string.Format("Payment callback unable to update database. Job id: {0}, PaymentId: {1}. {2}, {3}", jobId, bill.id, bill.due_at));
                         return;
                     }
-
 
                     // update the job details on the amount paid
                     var totalPaidAmount = jobDetailsDao.UpdatePaidAmount(jobId, jsonObj.paid_amount);

@@ -180,6 +180,7 @@
     <Compile Include="Controllers\TestController.cs" />
     <Compile Include="Controllers\UserController.cs" />
     <Compile Include="Controllers\UserTrackingController.cs" />
+    <Compile Include="Controllers\UtilsController.cs" />
     <Compile Include="Controllers\VoucherController.cs" />
     <Compile Include="Dao\ActivityDao.cs" />
     <Compile Include="Dao\AddressDao.cs" />

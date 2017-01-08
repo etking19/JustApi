@@ -18,7 +18,19 @@ namespace JustApi.Dao
             MySqlDataReader reader = null;
             try
             {
-                DateTime dueDate = DateTime.ParseExact(bill.due_at, "yyyy-MM-dd", null);
+                DateTime dueDate = new DateTime();
+                try
+                {
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Info, bill.due_at);
+                    dueDate = DateTime.ParseExact(bill.due_at, "yyyy-MM-dd", null);
+                }
+                catch (Exception e)
+                {
+                    // do nothing
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Info, e.Message);
+                    DBLogger.GetInstance().Log(DBLogger.ESeverity.Info, e.StackTrace);
+                }
+                
 
                 // add to user table
                 string query = string.Format("INSERT INTO {0} (payment_id, collection_id, paid, state, amount, paid_amount, due_at, email, mobile, name, url, job_id, paid_at) " +

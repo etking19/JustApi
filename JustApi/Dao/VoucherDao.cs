@@ -142,6 +142,47 @@ namespace JustApi.Dao
             };
 
         }
+
+        public List<string> GenerateVouchers(int numberOfVouchers, string namePrefix, float minPurchase, float percentageDiscount, DateTime expiredDate, int maxChars)
+        {
+            MySqlCommand mySqlCmd = null;
+            MySqlDataReader reader = null;
+            try
+            {
+                string query = string.Format("insert into {0} (name, end_date, voucher_type_id, discount_value, minimum_purchase, code, quantity) values ",
+                    TABLE_VOUCHER);
+
+                List<string> promoCodeList = new List<string>();
+                for (int count = 1; count <= numberOfVouchers; count++)
+                {
+                    string promoCode = Guid.NewGuid().ToString().Substring(1, maxChars);
+                    promoCodeList.Add(promoCode);
+
+                    query += string.Format("('{0}-{1}', '{2}', {3}, {4}, {5}, '{6}', 1),",
+                        namePrefix, count, expiredDate.ToString("yyyy-MM-dd hh:mm:ss"), 1, percentageDiscount, minPurchase, promoCode);
+                }
+
+                // remove the last comma
+                query = query.Substring(0, query.Length - 1);
+
+                mySqlCmd = new MySqlCommand(query);
+                if(0 != PerformSqlNonQuery(mySqlCmd))
+                {
+                    return promoCodeList;
+                }
+            }
+            catch (Exception e)
+            {
+                DBLogger.GetInstance().Log(DBLogger.ESeverity.Info, e.Message);
+                DBLogger.GetInstance().Log(DBLogger.ESeverity.Info, e.StackTrace);
+            }
+            finally
+            {
+                CleanUp(reader, mySqlCmd);
+            }
+
+            return null;
+        }
     }
 
 }

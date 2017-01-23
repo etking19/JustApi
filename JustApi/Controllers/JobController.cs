@@ -280,6 +280,7 @@ namespace JustApi.Controllers
                 }
 
                 // handle if partner amount is not present
+                bool notifyPartners = false;
                 if (jobDetails.amountPartner == 0)
                 {
                     if (jobDetails.jobTypeId == ((int)JustApi.Constants.Configuration.DeliveryJobType.Standard).ToString())
@@ -304,6 +305,12 @@ namespace JustApi.Controllers
 
                         jobDetails.amountPartner = priceDetails.partnerTotal;
                     }
+                }
+                else
+                {
+                    // only when admin add job then push notification
+                    // else notification push when user pay using payment gateway
+                    notifyPartners = true;
                 }
 
                 // add the job details
@@ -364,7 +371,7 @@ namespace JustApi.Controllers
                     Utility.UtilNotification.BroadCastMessage(clientIdentifiers.ToArray(), extraData, NotificationMsg.NewJob_Title, msg);
                 }
 
-                if (ConfigurationManager.AppSettings.Get("Debug") != "1")
+                if (ConfigurationManager.AppSettings.Get("Debug") != "0")
                 {
                     // send sms together because no history of push notification
                     UtilSms.SendSms(userObj.contactNumber, msg);
@@ -374,6 +381,42 @@ namespace JustApi.Controllers
                 var fleetType = fleetTypeDao.Get(jobDetails.fleetTypeId);
                 var jobType = jobTypeDao.Get().Find(t => t.jobTypeId == jobDetails.jobTypeId);
                 UtilEmail.SendInvoice(uniqueId, (string)paymentReq.payload, userObj, jobDetails, fleetType.name, jobType.name);
+
+                if(notifyPartners)
+                {
+                    // update the job order status
+                    if (false == jobDeliveryDao.UpdateJobStatus(jobId, ((int)Constants.Configuration.JobStatus.PaymentVerifying).ToString()))
+                    {
+                        DBLogger.GetInstance().Log(DBLogger.ESeverity.Critical, string.Format("Unable to update job status. Job id: {0}", jobId));
+                    }
+
+                    // send notification to partners
+                    var extraDataPartner = Helper.PushNotification.ConstructExtraData(Helper.PushNotification.ECategories.NewOpenJob, jobId);
+                    var partnerListIdentifiers = userDao.GetUserIdentifiersByRoleId(((int)Constants.Configuration.Role.CompanyAdmin).ToString());
+                    if (int.Parse(jobDetails.jobTypeId) == (int)Constants.Configuration.DeliveryJobType.Standard)
+                    {
+                        Utility.UtilNotification.BroadCastMessage(
+                            partnerListIdentifiers.ToArray(),
+                            extraDataPartner,
+                            NotificationMsg.NewOpenJob_Title,
+                            NotificationMsg.NewOpenJob_Desc + string.Format("From: {0}\nTo: {1}\nAmount:{2}",
+                                jobDetails.addressFrom[0].address3,
+                                jobDetails.addressTo[0].address3,
+                                jobDetails.amountPartner)
+                            );
+                    }
+                    else if (int.Parse(jobDetails.jobTypeId) == (int)Constants.Configuration.DeliveryJobType.Disposal)
+                    {
+                        Utility.UtilNotification.BroadCastMessage(
+                            partnerListIdentifiers.ToArray(),
+                            extraDataPartner,
+                            NotificationMsg.NewOpenJob_Title,
+                            NotificationMsg.NewOpenJob_Desc + string.Format("Dispose items from: {0}\nAmount:{1}",
+                                jobDetails.addressFrom[0].address3,
+                                jobDetails.amountPartner)
+                            );
+                    }
+                }
 
                 response.payload = uniqueId;
                 response = Utility.Utils.SetResponse(response, true, Constant.ErrorCode.ESuccess);

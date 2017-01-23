@@ -55,7 +55,15 @@ namespace JustApi.Utility
 
 
                      // send to self as multiple email not supported
-                     to = new Email("denell@justlorry.com");
+                     if (System.Configuration.ConfigurationManager.AppSettings["Debug"] == "0")
+                     {
+                         to = new Email("care@justlorry.com");
+                     }
+                     else
+                     {
+                         to = new Email("denell@justlorry.com");
+                     }
+                     
                      mail = new Mail(from, subject, to, content);
 
                      mail.TemplateId = ConfigurationManager.AppSettings.Get("InvoiceTemplateId");

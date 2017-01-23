@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web;
 using JustApi.Utility;
+using System.Configuration;
 
 namespace JustApi.Dao
 {
@@ -483,8 +484,7 @@ namespace JustApi.Dao
                 Dictionary<string, string> insertParam = new Dictionary<string, string>();
                 insertParam.Add("job_status_id", statusId);
                 insertParam.Add("job_id", jobId);
-                // TODO: modify by
-                insertParam.Add("modify_by", "1");
+                insertParam.Add("modify_by", ConfigurationManager.AppSettings.Get("SuperAdminUserId"));
 
                 mySqlCmd = GenerateAddCmd(TABLE_ORDER_STATUS, insertParam);
                 if (PerformSqlNonQuery(mySqlCmd) == 0)

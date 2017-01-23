@@ -27,7 +27,7 @@ namespace JustApi.Controllers
 
             try
             {
-                if (ConfigurationManager.AppSettings.Get("Debug") != "1")
+                if (ConfigurationManager.AppSettings.Get("Debug") != "0")
                 {
                     // Debug mode, push the notification straight away
 

@@ -210,85 +210,7 @@ namespace JustApi.Dao
                 mySqlCmd.Parameters.AddWithValue("@jobId", jobId);
 
                 reader = PerformSqlQuery(mySqlCmd);
-                Model.JobDetails result = null;
-                List<Model.Address> fromAddList = new List<Model.Address>();
-                List<Model.Address> toAddList = new List<Model.Address>();
-                while (reader.Read())
-                {
-                    if(result == null)
-                    {
-                        result = new Model.JobDetails()
-                        {
-                            jobId = reader["id"].ToString(),
-                            ownerUserId = reader["owner_id"].ToString(),
-                            jobTypeId = reader["job_type_id"].ToString(),
-                            fleetTypeId = reader["fleet_type_id"].ToString(),
-                            amount = (float)reader["amount"],
-                            amountPartner = (float)reader["partner_amount"],
-                            amountPaid = (float)reader["amount_paid"],
-                            cashOnDelivery = (int)reader["cash_on_delivery"] == 0 ? false : true,
-                            workerAssistant = (int)reader["worker_assistance"],
-                            deliveryDate = reader.GetDateTime("delivery_date").ToString("yyyy-MM-dd HH:mm:ss"),
-                            remarks = (string)reader["remarks"],
-                            enabled = (int)reader["enabled"] == 0 ? false : true,
-                            deleted = (int)reader["deleted"] == 0 ? false : true,
-                            createdBy = reader["created_by"].ToString(),
-                            creationDate = reader.GetDateTime("creation_date").ToString("yyyy-MM-dd HH:mm:ss"),
-                            modifiedBy = reader["modify_by"].ToString(),
-                            lastModifiedDate = reader.GetDateTime("last_modified_date").ToString("yyyy-MM-dd HH:mm:ss"),
-                            jobStatusId = reader["job_status_id"] == null ? null : reader["job_status_id"].ToString(),
-                            addressFrom = new List<Model.Address>(),
-                            addressTo = new List<Model.Address>()
-                        };
-                    }
-
-                    try
-                    {
-                        result.addressFrom.Add(new Model.Address()
-                        {
-                            addressId = reader["addFromId"].ToString(),
-                            address1 = (string)reader["add_from_1"],
-                            address2 = (string)reader["add_from_2"],
-                            address3 = (string)reader["add_from_3"],
-                            stateId = reader["state_from"].ToString(),
-                            countryId = reader["country_from"].ToString(),
-                            postcode = (string)reader["postcode_from"],
-                            gpsLongitude = (float)reader["longitude_from"],
-                            gpsLatitude = (float)reader["latitude_from"],
-                            contactPerson = (string)reader["customerFrom"],
-                            contact = (string)reader["contactFrom"]
-                        });
-                    }
-                    catch (Exception)
-                    {
-                        // possible do not have from
-                    }
-
-                    try
-                    {
-                        result.addressTo.Add(new Model.Address()
-                        {
-                            addressId = reader["addToId"].ToString(),
-                            address1 = (string)reader["add_to_1"],
-                            address2 = (string)reader["add_to_2"],
-                            address3 = (string)reader["add_to_3"],
-                            stateId = reader["state_to"].ToString(),
-                            countryId = reader["country_to"].ToString(),
-                            postcode = (string)reader["postcode_to"],
-                            gpsLongitude = (float)reader["longitude_to"],
-                            gpsLatitude = (float)reader["latitude_to"],
-                            contactPerson = (string)reader["customerTo"],
-                            contact = (string)reader["contactTo"]
-                        });
-                    }
-                    catch (Exception)
-                    {
-                        // possible do not have to
-                    }
-
-                }
-
-                return result;
+                return getDetails(reader);
             }
             catch (Exception e)
             {
@@ -529,6 +451,95 @@ namespace JustApi.Dao
             return null;
         }
 
+        private Model.JobDetails getDetails(MySqlDataReader reader)
+        {
+            Model.JobDetails result = null;
+            List<Model.Address> fromAddList = new List<Model.Address>();
+            List<Model.Address> toAddList = new List<Model.Address>();
+            while (reader.Read())
+            {
+                if (result == null)
+                {
+                    result = new Model.JobDetails()
+                    {
+                        jobId = reader["id"].ToString(),
+                        ownerUserId = reader["owner_id"].ToString(),
+                        jobTypeId = reader["job_type_id"].ToString(),
+                        fleetTypeId = reader["fleet_type_id"].ToString(),
+                        amount = (float)reader["amount"],
+                        amountPaid = (float)reader["amount_paid"],
+                        cashOnDelivery = (int)reader["cash_on_delivery"] == 0 ? false : true,
+                        workerAssistant = (int)reader["worker_assistance"],
+                        deliveryDate = reader.GetDateTime("delivery_date").ToString("yyyy-MM-dd HH:mm:ss"),
+                        remarks = (string)reader["remarks"],
+                        enabled = (int)reader["enabled"] == 0 ? false : true,
+                        deleted = (int)reader["deleted"] == 0 ? false : true,
+                        createdBy = reader["created_by"].ToString(),
+                        creationDate = reader.GetDateTime("creation_date").ToString("yyyy-MM-dd HH:mm:ss"),
+                        modifiedBy = reader["modify_by"].ToString(),
+                        lastModifiedDate = reader.GetDateTime("last_modified_date").ToString("yyyy-MM-dd HH:mm:ss"),
+                        jobStatusId = reader["job_status_id"] == null ? null : reader["job_status_id"].ToString(),
+                        amountPartner = reader.GetFloat("partner_amount"),
+                        assembleBed = (int)reader["assemble_bed"],
+                        assembleDiningTable = (int)reader["assemble_dining_table"],
+                        assembleWardrobe = (int)reader["assemble_wardrobe"],
+                        assembleOfficeTable = (int)reader["assemble_office_table"],
+                        bubbleWrapping = (int)reader["bubble_wrapping"],
+                        shrinkWrapping = (int)reader["shrink_wrapping"],
+                        addressFrom = new List<Model.Address>(),
+                        addressTo = new List<Model.Address>()
+                    };
+                }
+
+                try
+                {
+                    result.addressFrom.Add(new Model.Address()
+                    {
+                        addressId = reader["addFromId"].ToString(),
+                        address1 = (string)reader["add_from_1"],
+                        address2 = (string)reader["add_from_2"],
+                        address3 = (string)reader["add_from_3"],
+                        stateId = reader["state_from"].ToString(),
+                        countryId = reader["country_from"].ToString(),
+                        postcode = (string)reader["postcode_from"],
+                        gpsLongitude = (float)reader["longitude_from"],
+                        gpsLatitude = (float)reader["latitude_from"],
+                        contactPerson = (string)reader["customerFrom"],
+                        contact = (string)reader["contactFrom"]
+                    });
+                }
+                catch (Exception)
+                {
+                    // possible do not have from
+                }
+
+                try
+                {
+                    result.addressTo.Add(new Model.Address()
+                    {
+                        addressId = reader["addToId"].ToString(),
+                        address1 = (string)reader["add_to_1"],
+                        address2 = (string)reader["add_to_2"],
+                        address3 = (string)reader["add_to_3"],
+                        stateId = reader["state_to"].ToString(),
+                        countryId = reader["country_to"].ToString(),
+                        postcode = (string)reader["postcode_to"],
+                        gpsLongitude = (float)reader["longitude_to"],
+                        gpsLatitude = (float)reader["latitude_to"],
+                        contactPerson = (string)reader["customerTo"],
+                        contact = (string)reader["contactTo"]
+                    });
+                }
+                catch (Exception)
+                {
+                    // possible do not have to
+                }
+
+            }
+
+            return result;
+        }
+
         private List<Model.JobDetails> getDetailsList(MySqlDataReader reader)
         {
             List<Model.JobDetails> jobDetailsList = new List<Model.JobDetails>();
@@ -652,6 +663,13 @@ namespace JustApi.Dao
                     modifiedBy = reader["modify_by"].ToString(),
                     lastModifiedDate = reader.GetDateTime("last_modified_date").ToString("yyyy-MM-dd HH:mm:ss"),
                     jobStatusId = reader["job_status_id"] == null ? null : reader["job_status_id"].ToString(),
+                    amountPartner = reader.GetFloat("partner_amount"),
+                    assembleBed = (int)reader["assemble_bed"],
+                    assembleDiningTable = (int)reader["assemble_dining_table"],
+                    assembleWardrobe = (int)reader["assemble_wardrobe"],
+                    assembleOfficeTable = (int)reader["assemble_office_table"],
+                    bubbleWrapping = (int)reader["bubble_wrapping"],
+                    shrinkWrapping = (int)reader["shrink_wrapping"],
                     addressFrom = addFromList,
                     addressTo = addToList
                 });

@@ -16,7 +16,7 @@ namespace JustApi.Utility
         {
             var obj = new
             {
-                app_id = System.Configuration.ConfigurationManager.AppSettings["OneSignalAppId"],
+                app_id = System.Configuration.ConfigurationManager.AppSettings.Get("OneSignalAppId"),
                 contents = new { en = message },
                 headings = new { en = title },
                 include_player_ids = new string[] { identifier },
@@ -33,7 +33,7 @@ namespace JustApi.Utility
         {
             var obj = new
             {
-                app_id = System.Configuration.ConfigurationManager.AppSettings["OneSignalAppId"],
+                app_id = System.Configuration.ConfigurationManager.AppSettings.Get("OneSignalAppId"),
                 contents = new { en = message },
                 headings = new { en = title },
                 include_player_ids = identifiers,

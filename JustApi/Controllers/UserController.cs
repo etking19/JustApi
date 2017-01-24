@@ -12,12 +12,31 @@ namespace JustApi.Controllers
     {
         public Response Post([FromBody] User user)
         {
+            // check if user add with role 
+            string password = null;
+            if (user.roleId != null &&
+                user.password == null)
+            {
+                // generate random password for this user
+                Random generator = new Random();
+                password = generator.Next(0, 1000000).ToString("D6");
+
+                user.password = password;
+            }
+
             var result = userDao.AddUser(user);
             if (result == null)
             {
                 response = Utility.Utils.SetResponse(response, false, Constant.ErrorCode.EGeneralError);
                 return response;
             }
+
+            // notify user with the latest password created
+            if (password != null)
+            {
+                Utility.UtilSms.SendSms(user.contactNumber, string.Format("From JustLorry. Your account has been created. Please download JustPartner from Android or iOS app store. Username: {0}, Password: {1}", user.username, password));
+            }
+
 
             response.payload = result;
             response = Utility.Utils.SetResponse(response, true, Constant.ErrorCode.ESuccess);

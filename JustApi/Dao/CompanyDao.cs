@@ -214,7 +214,7 @@ namespace JustApi.Dao
             MySqlDataReader reader = null;
             try
             {
-                string query = string.Format("SELECT rating, {1}.*, {8}.id as Rid, {8}.name as Rname, {4}.id as Aid, {4}.name as Aname, {5}.id as Pid, {5}.name as Pname FROM {0} " +
+                string query = string.Format("SELECT COALESCE(MAX(rating), 0) as rating, {1}.*, {8}.id as Rid, {8}.name as Rname, {4}.id as Aid, {4}.name as Aname, {5}.id as Pid, {5}.name as Pname FROM {0} " +
                     "INNER JOIN {1} ON {0}.company_id={1}.id AND {1}.deleted=0 AND {1}.enabled=1 " +
                     "INNER JOIN {2} ON {0}.user_id={2}.user_id AND {2}.company_id={0}.company_id " +
                     "INNER JOIN {3} ON {2}.role_id={3}.role_id " +

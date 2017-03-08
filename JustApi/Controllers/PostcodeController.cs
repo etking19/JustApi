@@ -175,7 +175,7 @@ namespace JustApi.Controllers
                 if (fromFormattedAdd != null &&
                     toFormattedAdd != null)
                 {
-                    url = string.Format("https://maps.googleapis.com/maps/api/directions/json?region=my&origin={0}&destination={1}&mode=driving", deliverFrom, deliverTo);
+                    url = string.Format("https://maps.googleapis.com/maps/api/directions/json?region=my&origin={0}&destination={1}&mode=driving", fromFormattedAdd, toFormattedAdd);
                     using (var client = new HttpClient())
                     {
                         var response = client.GetAsync(url).Result;

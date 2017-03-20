@@ -1,6 +1,7 @@
 ﻿using JustApi.Model;
 using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -49,7 +50,8 @@ namespace JustApi.Controllers
 
                 response.payload = javaScriptSerializer.Serialize(result);
             }
-            else if (companyId != null)
+            else if (companyId != null &&
+                companyId != ConfigurationManager.AppSettings.Get("SuperAdminCompanyId"))
             {
                 var result = fleetDao.GetByCompanyId(companyId, limit, skip);
                 if (result == null)

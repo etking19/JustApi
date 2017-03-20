@@ -751,7 +751,7 @@ namespace JustApi.Dao
             MySqlDataReader reader = null;
             try
             {
-                string query = string.Format("SELECT * FROM {0} " +
+                string query = string.Format("SELECT *, {1}.last_modified_date as last_modified FROM {0} " +
                     "INNER JOIN {1} ON {0}.id={1}.job_id " +
                     "WHERE {0}.id={2}",
                     TABLE_NAME_JOB, TABLE_NAME_JOBORDERSTATUS, jobId);
@@ -781,7 +781,7 @@ namespace JustApi.Dao
                     {
                         job_status_id = reader["job_status_id"].ToString(),
                         modify_by = reader["modify_by"].ToString(),
-                        last_modified_date = reader["last_modified_date"].ToString()
+                        last_modified_date = reader["last_modified"].ToString()
                     });
                 }
 
